@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # 1. Martin Tile Server
+  martin:
+    image: maplibre/martin:latest
+    container_name: martin_tileserver
+    restart: always
+    command: [ "-c", "/etc/martin.yaml" ]
+    volumes:
+      - ./martin_config.yaml:/etc/martin.yaml
+    ports:
+      - "3333:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - geo_network
+
+  # 2. FastAPI Backend
+  api:
+    build: ./backend
+    container_name: geo_ai_api
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://roy:123@host.docker.internal:5432/geospatial_db
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - JWT_SECRET=supersecretgeoaikey2026
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./backend/style:/app/style
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - geo_network
+
+  # 3. React Frontend
+  frontend:
+    build: ./frontend
+    container_name: geo_ai_frontend
+    restart: always
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    networks:
+      - geo_network
+
+  # 4. Maputnik Editor
+  maputnik:
+    image: ghcr.io/maplibre/maputnik:main
+    container_name: maputnik_editor
+    restart: always
+    volumes:
+      - ./backend/style:/styles
+    command: ["--file", "/styles/default.json", "--watch", "--port", "8000"]
+    ports:
+      - "8888:8000"
+    networks:
+      - geo_network
+
+networks:
+  geo_network:
+    driver: bridge

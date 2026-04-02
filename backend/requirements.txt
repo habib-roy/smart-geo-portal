@@ -1,0 +1,22 @@
+fastapi
+bcrypt < 4.0.0
+uvicorn
+sqlalchemy
+psycopg2-binary
+langchain
+langchain-core
+langchain-community
+langchain-ollama
+langchain-postgres
+langchain-classic
+psycopg[binary]
+pgvector
+geopandas
+fiona
+shapely
+geoalchemy2
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+docker
+watchdog

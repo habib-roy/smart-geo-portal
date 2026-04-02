@@ -1,0 +1,16 @@
+# Martin v0.8.0 configuration file
+# For more info: https://maplibre.org/martin/config.html
+
+# Listen address for all interfaces
+listen_addresses: "0.0.0.0:3000"
+
+# Explicitly enable CORS
+cors: "*"
+
+# PostGIS sources
+postgres:
+  - connection_string: "postgresql://roy:123@host.docker.internal:5432/geospatial_db"
+    # Auto-detect all tables with geometry and SRID=4326
+    auto_publish:
+      tables: true
+      functions: true

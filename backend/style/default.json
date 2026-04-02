@@ -1,0 +1,52 @@
+{
+  "version": 8,
+  "name": "Geo-AI Default Style",
+  "metadata": {
+    "maputnik:renderer": "mlgljs"
+  },
+  "sources": {
+    "carto-voyager": {
+      "type": "raster",
+      "tiles": [
+        "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
+        "https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
+        "https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png"
+      ],
+      "tileSize": 256,
+      "attribution": "&copy; CartoDB, &copy; OpenStreetMap contributors"
+    },
+    "geo_konflik_tambang": {
+      "type": "vector",
+      "url": "http://localhost:3333/geo_konflik_tambang"
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#0a0a0a"
+      }
+    },
+    {
+      "id": "carto-voyager-layer",
+      "type": "raster",
+      "source": "carto-voyager",
+      "minzoom": 0,
+      "maxzoom": 22
+    },
+    {
+      "id": "geo_konflik_tambang",
+      "type": "fill",
+      "source": "geo_konflik_tambang",
+      "source-layer": "geo_konflik_tambang",
+      "layout": {
+        "visibility": "visible"
+      },
+      "paint": {
+        "fill-color": "rgba(84, 226, 37, 1)"
+      }
+    }
+  ],
+  "id": "geo-ai-v1"
+}
