@@ -1,4 +1,6 @@
-# Smart Geo Portal🌍🤖
+# Smart Geo Portal 🌍🤖
+
+![Smart Geo Portal Preview](frontend/public/map.png)
 
 **Smart Geo Portal** is a high-performance Geospatial platform that integrates vector map tiles, interactive dashboards, and AI-powered spatial analytics. It leverages Large Language Models (LLMs) to allow users to interact with their spatial data using natural language.
 

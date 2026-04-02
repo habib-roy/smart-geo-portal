@@ -21,6 +21,7 @@ __pycache__/
 /backend/wheels/
 /backend/pip-wheel-metadata/
 /backend/share/python-wheels/
+/backend/style/*
 *.egg-info/
 .installed.cfg
 *.egg

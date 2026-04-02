@@ -58,6 +58,33 @@ if not os.path.exists("style"):
     os.makedirs("style")
 app.mount("/styles", StaticFiles(directory="style"), name="styles")
 
+# --- GLOBAL AI CACHE ---
+# Cache to avoid recompiling database reflection on every request
+global_cache = {
+    "sql_db": None,
+    "llm": None
+}
+
+@app.on_event("startup")
+async def startup_event():
+    print(f"[{datetime.now()}] Initializing AI Components...")
+    try:
+        db_uri = os.getenv("DATABASE_URL", "postgresql://roy:123@host.docker.internal:5432/geospatial_db")
+        # Optimization: only reflect tables when needed, or at least cache the engine
+        global_cache["sql_db"] = SQLDatabase.from_uri(db_uri)
+        
+        ollama_host = os.getenv("OLLAMA_HOST", "http://host.docker.internal:11434")
+        global_cache["llm"] = ChatOllama(
+            model="llama3.2", 
+            base_url=ollama_host,
+            temperature=0,
+            streaming=True
+        )
+        print(f"[{datetime.now()}] AI Components Initialized Successfully.")
+    except Exception as e:
+        print(f"[{datetime.now()}] Failed to initialize AI Components during startup: {e}")
+
+
 # --- LIVE SYNC STYLE ---
 style_event_queue = asyncio.Queue()
 
@@ -333,9 +360,19 @@ def delete_data(data_id: int, current_user: models.User = Depends(auth.get_curre
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- AI CHAT WITH MEMORY & STREAMING ---
+# --- AI CHAT WITH SMART ROUTING, MEMORY & STREAMING ---
 # In-memory storage for chat histories (per user/session)
 chat_histories = {} 
+
+def is_spatial_query(text: str) -> bool:
+    """Detection of spatial or database-related keywords for routing."""
+    keywords = [
+        "data", "layer", "tabel", "tampilkan", "cari", "hitung", "berapa", 
+        "spatial", "peta", "geojson", "shapefile", "jarak", "area", "lokasi",
+        "titik", "polygon", "conflict", "mine", "mining", "database", "sql"
+    ]
+    text_lower = text.lower()
+    return any(kw in text_lower for kw in keywords)
 
 @app.post("/chat", tags=["AI"])
 async def chat(
@@ -343,19 +380,24 @@ async def chat(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(database.get_db)
 ):
+    print(f"[{datetime.now()}] Chat Request: {message[:50]}...")
     try:
-        db_uri = os.getenv("DATABASE_URL", "postgresql://roy:123@host.docker.internal:5432/geospatial_db")
-        sql_db = SQLDatabase.from_uri(db_uri)
+        # Load global cache
+        if global_cache["sql_db"] is None or global_cache["llm"] is None:
+            # Re-init if cache lost
+            db_uri = os.getenv("DATABASE_URL", "postgresql://roy:123@host.docker.internal:5432/geospatial_db")
+            global_cache["sql_db"] = SQLDatabase.from_uri(db_uri)
+            global_cache["llm"] = ChatOllama(
+                model="llama3.2", 
+                base_url=os.getenv("OLLAMA_HOST", "http://host.docker.internal:11434"),
+                temperature=0,
+                streaming=True
+            )
+            
+        sql_db = global_cache["sql_db"]
+        llm = global_cache["llm"]
         
-        # LLM Llama 3.2 with Streaming
-        llm = ChatOllama(
-            model="llama3.2", 
-            base_url=os.getenv("OLLAMA_HOST", "http://host.docker.internal:11434"),
-            temperature=0,
-            streaming=True
-        )
-        
-        # Memory logic
+        # Session Memory
         session_id = str(current_user.id)
         if session_id not in chat_histories:
             chat_histories[session_id] = ConversationBufferMemory(
@@ -365,33 +407,76 @@ async def chat(
         
         memory = chat_histories[session_id]
         
-        # SQL Agent with Memory
-        agent_executor = create_sql_agent(
-            llm, 
-            db=sql_db, 
-            verbose=True,
-            agent_executor_kwargs={"memory": memory}
-        )
+        # --- ROUTING LOGIC ---
+        spatial_context = is_spatial_query(message)
         
-        async def response_streamer():
-            # Invoke the agent
-            # Note: create_sql_agent doesn't always support astream easily in all versions
-            # So we use a wrapper or the direct invoke for now but send chunks
-            result = await asyncio.to_thread(agent_executor.invoke, {
-                "input": f"{message}. Jawab dalam Bahasa Indonesia yang ramah dan gunakan format Markdown jika ada tabel/data."
-            })
+        if not spatial_context:
+            print(f"[{datetime.now()}] Routing to FAST path (General Chat)")
             
-            # Since create_sql_agent might not stream tokens easily, 
-            # we can at least return the final answer in a streaming way to keep UI consistent
-            # Or use a more advanced custom chain for full token streaming.
-            # For now, let's stream the final answer string character by character 
-            # to simulate the effect while ensuring memory works.
-            answer = result.get("output", "")
-            for i in range(0, len(answer), 5): # Stream in chunks of 5 chars
-                yield answer[i:i+5]
-                await asyncio.sleep(0.01)
+            async def fast_response_streamer():
+                try:
+                    # Get history for context
+                    history = memory.load_memory_variables({}).get("chat_history", [])
+                    prompt_messages = history + [HumanMessage(content=message)]
+                    
+                    full_answer = ""
+                    # Direct token streaming from Ollama (Very Fast)
+                    async for chunk in llm.astream(prompt_messages):
+                        token = chunk.content
+                        full_answer += token
+                        yield token
+                        await asyncio.sleep(0.01)
+                    
+                    # Save into memory
+                    memory.save_context({"input": message}, {"output": full_answer})
+                    print(f"[{datetime.now()}] Fast Path Finished. Length: {len(full_answer)}")
+                except Exception as e:
+                    print(f"Fast path error: {e}")
+                    yield f"Error: {str(e)}"
 
-        return StreamingResponse(response_streamer(), media_type="text/plain")
+            return StreamingResponse(fast_response_streamer(), media_type="text/plain")
+
+        else:
+            print(f"[{datetime.now()}] Routing to POWER path (Spatial Agent)")
+            # Agent for spatial data
+            agent_executor = create_sql_agent(
+                llm, 
+                db=sql_db, 
+                verbose=True,
+                agent_executor_kwargs={"memory": memory}
+            )
+            
+            async def power_response_streamer():
+                start_time = datetime.now()
+                try:
+                    # Enrich prompt for agent
+                    full_input = f"{message}. Jawab dalam Bahasa Indonesia yang ramah. Jika ada data tabel, gunakan Markdown."
+                    
+                    # Agent invoke waits for Ollama thought chain
+                    result = await asyncio.to_thread(agent_executor.invoke, {"input": full_input})
+                    answer = result.get("output", "")
+                    
+                    duration = (datetime.now() - start_time).total_seconds()
+                    print(f"[{datetime.now()}] Power Path Finished in {duration:.2f}s. Length: {len(answer)}")
+
+                    if not answer:
+                        yield "Maaf, sistem tidak menemukan data yang sesuai."
+                        return
+
+                    # Simulated stream for the final answer
+                    for i in range(0, len(answer), 8):
+                        yield answer[i:i+8]
+                        await asyncio.sleep(0.01)
+                        
+                except Exception as inner_e:
+                    print(f"Power path inner error: {inner_e}")
+                    yield f"Error Spatial Agent: {str(inner_e)}"
+
+            return StreamingResponse(power_response_streamer(), media_type="text/plain")
+
+    except Exception as e:
+        print(f"Chat execution outer error: {e}")
+        return StreamingResponse(iter([f"Error Routing: {str(e)}"]), media_type="text/plain")
 
     except Exception as e:
         print(f"Chat Error: {e}")

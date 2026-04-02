@@ -240,18 +240,26 @@ export default function MapViewer() {
       const decoder = new TextDecoder();
 
       // Add empty assistant message to start streaming into it
-      setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: '📡 AI sedang berpikir...' }]);
 
+      let firstChunk = true;
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
+        
         setMessages(prev => {
           const lastMsg = prev[prev.length - 1];
-          const updatedMsg = { ...lastMsg, content: lastMsg.content + chunk };
+          // Replace "Thinking..." with the first real chunk
+          const newContent = firstChunk ? chunk : lastMsg.content + chunk;
+          const updatedMsg = { ...lastMsg, content: newContent };
           return [...prev.slice(0, -1), updatedMsg];
         });
+        
+        if (firstChunk && chunk.trim() !== '') {
+          firstChunk = false;
+        }
       }
     } catch (err) {
       console.error(err);
