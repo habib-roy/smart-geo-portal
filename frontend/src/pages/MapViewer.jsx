@@ -4,12 +4,12 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { 
-  Send, 
-  Map as MapIcon, 
-  Layers, 
-  MessageSquare, 
-  ChevronRight, 
+import {
+  Send,
+  Map as MapIcon,
+  Layers,
+  MessageSquare,
+  ChevronRight,
   LogOut,
   LayoutDashboard,
   Loader2,
@@ -48,18 +48,19 @@ export default function MapViewer() {
   const [lng, setLng] = useState(106.8456); // Jakarta
   const [lat, setLat] = useState(-6.2088);
   const [zoom, setZoom] = useState(10);
-  
-  const backendHost = window.location.hostname;
-  
+
+  const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8000`;
+  const MARTIN_URL = import.meta.env.VITE_MARTIN_URL || `http://${window.location.hostname}:3333`;
+
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'Halo! Saya asisten Geo-AI. Ada yang bisa saya bantu terkait data peta Anda?' }
+    { role: 'assistant', content: 'Halo! Saya asisten Smart Geo Portal. Ada yang bisa saya bantu terkait data peta Anda?' }
   ]);
   const [input, setInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [layers, setLayers] = useState([]);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  
+
   const [mapLoaded, setMapLoaded] = useState(false);
   const [martinStatus, setMartinStatus] = useState('pending'); // 'pending', 'online', 'offline'
   const [apiStatus, setApiStatus] = useState('pending');
@@ -76,10 +77,10 @@ export default function MapViewer() {
 
   useEffect(() => {
     if (map.current) return;
-    
+
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: `http://${backendHost}:8000/map/style.json`,
+      style: `${API_URL}/map/style.json`,
       center: [lng, lat],
       zoom: zoom
     });
@@ -141,30 +142,30 @@ export default function MapViewer() {
     });
 
     // Style Live Sync (SSE)
-    const eventSource = new EventSource(`http://${backendHost}:8000/map/style/events`);
-    
+    const eventSource = new EventSource(`${API_URL}/map/style/events`);
+
     eventSource.onmessage = async (event) => {
       if (event.data === 'reload' && map.current) {
         console.log('Style change detected from Maputnik, syncing...');
         try {
-          const response = await fetch(`http://${backendHost}:8000/map/style.json`);
+          const response = await fetch(`${API_URL}/map/style.json`);
           const newStyle = await response.json();
-          
+
           // Simpan daftar layer manual yang sedang aktif sebelum ganti style
           const currentManualLayers = Array.from(activeManualLayers);
-          
+
           // Update style
           map.current.setStyle(newStyle);
-          
+
           // Tunggu style selesai dimuat, lalu tambahkan kembali layer manual jika belum ada dalam style baru
           map.current.once('style.load', () => {
             currentManualLayers.forEach(tableName => {
-               // Periksa apakah style baru sudah menyertakan layer ini (misal via Maputnik)
-               // Jika belum, tambahkan lagi secara manual
-               if (!map.current.getSource(tableName)) {
-                  console.log(`Restoring manual layer: ${tableName}`);
-                  addLayerToMap(tableName, false); // false = jangan zoom lagi
-               }
+              // Periksa apakah style baru sudah menyertakan layer ini (misal via Maputnik)
+              // Jika belum, tambahkan lagi secara manual
+              if (!map.current.getSource(tableName)) {
+                console.log(`Restoring manual layer: ${tableName}`);
+                addLayerToMap(tableName, false); // false = jangan zoom lagi
+              }
             });
           });
         } catch (err) {
@@ -178,7 +179,7 @@ export default function MapViewer() {
     });
 
     map.current.addControl(new maplibregl.NavigationControl(), 'top-right');
-    
+
     fetchLayers();
     checkConnectivity();
 
@@ -189,19 +190,19 @@ export default function MapViewer() {
         map.current = null;
       }
     };
-  }, [backendHost, activeManualLayers]);
+  }, [API_URL, MARTIN_URL, activeManualLayers]);
 
   const checkConnectivity = async () => {
     // Check Martin
     try {
-      await axios.get(`http://${backendHost}:3333/catalog`);
+      await axios.get(`${MARTIN_URL}/catalog`);
       setMartinStatus('online');
     } catch (e) {
       setMartinStatus('offline');
     }
     // Check Backend
     try {
-      await axios.get(`http://${backendHost}:8000/data/list`);
+      await axios.get(`${API_URL}/data/list`);
       setApiStatus('online');
     } catch (e) {
       setApiStatus('offline');
@@ -210,7 +211,7 @@ export default function MapViewer() {
 
   const fetchLayers = async () => {
     try {
-      const res = await axios.get(`http://${backendHost}:8000/data/list`);
+      const res = await axios.get(`${API_URL}/data/list`);
       setLayers(res.data);
     } catch (err) {
       console.error(err);
@@ -228,7 +229,7 @@ export default function MapViewer() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://${backendHost}:8000/chat?message=${encodeURIComponent(input)}`, {
+      const response = await fetch(`${API_URL}/chat?message=${encodeURIComponent(input)}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -237,14 +238,14 @@ export default function MapViewer() {
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      
+
       // Add empty assistant message to start streaming into it
       setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        
+
         const chunk = decoder.decode(value, { stream: true });
         setMessages(prev => {
           const lastMsg = prev[prev.length - 1];
@@ -262,10 +263,10 @@ export default function MapViewer() {
 
   const addLayerToMap = async (table_name, shouldFly = true) => {
     if (!mapLoaded || !map.current) return;
-    
+
     try {
       // 1. Ambil metadata TileJSON untuk bound (FitBound)
-      const tileJSONUrl = `http://${backendHost}:3333/${table_name}`;
+      const tileJSONUrl = `${MARTIN_URL}/${table_name}`;
       const res = await axios.get(tileJSONUrl);
       const metadata = res.data;
 
@@ -279,15 +280,15 @@ export default function MapViewer() {
 
       // 2. Jika source sudah ada, tidak perlu tambah lagi
       if (map.current.getSource(table_name)) {
-         console.log(`Layer ${table_name} sudah ada di peta.`);
-         return;
+        console.log(`Layer ${table_name} sudah ada di peta.`);
+        return;
       }
 
       // Tambahkan ke daftar manual layer agar persisten saat ganti style
       setActiveManualLayers(prev => new Set(prev).add(table_name));
 
       // 3. Tambahkan Source dan Layer Universal
-      const martinTileUrl = `http://${backendHost}:3333/${table_name}/{z}/{x}/{y}`;
+      const martinTileUrl = `${MARTIN_URL}/${table_name}/{z}/{x}/{y}`;
       map.current.addSource(table_name, {
         type: 'vector',
         tiles: [martinTileUrl]
@@ -334,20 +335,20 @@ export default function MapViewer() {
       {/* Sidebar Navigation */}
       <div className="w-16 bg-gray-900 border-r border-gray-800 flex flex-col items-center py-6 gap-6">
         <div className="bg-blue-600 p-2 rounded-lg cursor-pointer" onClick={() => navigate('/dashboard')}>
-           <LayoutDashboard size={20} className="text-white" />
+          <LayoutDashboard size={20} className="text-white" />
         </div>
         <div className="bg-gray-800 p-2 rounded-lg cursor-pointer text-gray-400 hover:text-white">
-           <MapIcon size={20} />
+          <MapIcon size={20} />
         </div>
         <div className="mt-auto mb-4 bg-gray-800 p-2 rounded-lg cursor-pointer text-red-400 hover:text-red-300" onClick={logout}>
-           <LogOut size={20} />
+          <LogOut size={20} />
         </div>
       </div>
 
       {/* Map Content */}
       <div className="flex-1 relative">
         <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
-        
+
         {/* Layer Panel Overlay */}
         <div className="absolute top-6 left-6 w-64 flex flex-col gap-4">
           <div className="bg-gray-900/90 backdrop-blur-md border border-gray-800 rounded-2xl shadow-2xl p-4 overflow-hidden">
@@ -360,7 +361,7 @@ export default function MapViewer() {
                 <p className="text-gray-500 text-[10px] italic">Belum ada data...</p>
               ) : (
                 layers.map(layer => (
-                  <button 
+                  <button
                     key={layer.id}
                     onClick={() => addLayerToMap(layer.table_name)}
                     className="w-full text-left bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded-lg text-[10px] flex items-center justify-between group transition-all"
@@ -378,15 +379,15 @@ export default function MapViewer() {
             <div className="flex items-center justify-between text-[10px] uppercase tracking-tighter">
               <span className="text-gray-500 font-bold">Martin Tiles</span>
               <div className="flex items-center gap-1.5 font-bold">
-                 <div className={`w-2 h-2 rounded-full ${martinStatus === 'online' ? 'bg-green-500' : martinStatus === 'offline' ? 'bg-red-500' : 'bg-yellow-500 animate-pulse'}`} />
-                 <span className={martinStatus === 'online' ? 'text-green-500' : martinStatus === 'offline' ? 'text-red-500' : 'text-yellow-500'}>{martinStatus}</span>
+                <div className={`w-2 h-2 rounded-full ${martinStatus === 'online' ? 'bg-green-500' : martinStatus === 'offline' ? 'bg-red-500' : 'bg-yellow-500 animate-pulse'}`} />
+                <span className={martinStatus === 'online' ? 'text-green-500' : martinStatus === 'offline' ? 'text-red-500' : 'text-yellow-500'}>{martinStatus}</span>
               </div>
             </div>
             <div className="flex items-center justify-between text-[10px] uppercase tracking-tighter">
-              <span className="text-gray-500 font-bold">Geo-AI Backend</span>
+              <span className="text-gray-500 font-bold">Smart Geo Portal Backend</span>
               <div className="flex items-center gap-1.5 font-bold">
-                 <div className={`w-2 h-2 rounded-full ${apiStatus === 'online' ? 'bg-green-500' : apiStatus === 'offline' ? 'bg-red-500' : 'bg-yellow-500 animate-pulse'}`} />
-                 <span className={apiStatus === 'online' ? 'text-green-500' : apiStatus === 'offline' ? 'text-red-500' : 'text-yellow-500'}>{apiStatus}</span>
+                <div className={`w-2 h-2 rounded-full ${apiStatus === 'online' ? 'bg-green-500' : apiStatus === 'offline' ? 'bg-red-500' : 'bg-yellow-500 animate-pulse'}`} />
+                <span className={apiStatus === 'online' ? 'text-green-500' : apiStatus === 'offline' ? 'text-red-500' : 'text-yellow-500'}>{apiStatus}</span>
               </div>
             </div>
           </div>
@@ -401,7 +402,7 @@ export default function MapViewer() {
               <Bot size={20} className="text-white" />
             </div>
             <div>
-              <h2 className="font-bold text-white">Geo-AI Assistant</h2>
+              <h2 className="font-bold text-white">Smart Geo Portal Assistant</h2>
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
                 <span className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Online</span>
@@ -413,18 +414,17 @@ export default function MapViewer() {
         <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm ${
-                msg.role === 'user' 
-                  ? 'bg-blue-600 text-white rounded-tr-none' 
+              <div className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm ${msg.role === 'user'
+                  ? 'bg-blue-600 text-white rounded-tr-none'
                   : 'bg-gray-800 text-gray-200 rounded-tl-none border border-gray-700'
-              }`}>
+                }`}>
                 {msg.role === 'assistant' ? (
-                  <ReactMarkdown 
+                  <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
-                      table: ({node, ...props}) => <table className="border-collapse border border-gray-700 my-2 w-full" {...props} />,
-                      th: ({node, ...props}) => <th className="border border-gray-700 px-2 py-1 bg-gray-900" {...props} />,
-                      td: ({node, ...props}) => <td className="border border-gray-700 px-2 py-1" {...props} />,
+                      table: ({ node, ...props }) => <table className="border-collapse border border-gray-700 my-2 w-full" {...props} />,
+                      th: ({ node, ...props }) => <th className="border border-gray-700 px-2 py-1 bg-gray-900" {...props} />,
+                      td: ({ node, ...props }) => <td className="border border-gray-700 px-2 py-1" {...props} />,
                     }}
                   >
                     {msg.content}
@@ -446,8 +446,8 @@ export default function MapViewer() {
 
         <div className="p-4 border-t border-gray-800">
           <form onSubmit={handleSendMessage} className="relative">
-            <input 
-              type="text" 
+            <input
+              type="text"
               className="w-full bg-gray-950 border border-gray-800 rounded-2xl pl-12 pr-12 py-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
               placeholder="Tanya apapun tentang peta..."
               value={input}
@@ -457,7 +457,7 @@ export default function MapViewer() {
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
               <MessageSquare size={18} />
             </div>
-            <button 
+            <button
               type="submit"
               disabled={chatLoading || !input.trim()}
               className="absolute right-3 top-1/2 -translate-y-1/2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 p-2 rounded-xl text-white transition-all shadow-lg shadow-blue-600/20"

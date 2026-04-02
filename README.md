@@ -1,6 +1,6 @@
-# Geo-AI Platform 🌍🤖
+# Smart Geo Portal🌍🤖
 
-**Geo-AI** is a high-performance Geospatial platform that integrates vector map tiles, interactive dashboards, and AI-powered spatial analytics. It leverages Large Language Models (LLMs) to allow users to interact with their spatial data using natural language.
+**Smart Geo Portal** is a high-performance Geospatial platform that integrates vector map tiles, interactive dashboards, and AI-powered spatial analytics. It leverages Large Language Models (LLMs) to allow users to interact with their spatial data using natural language.
 
 ---
 
@@ -51,9 +51,27 @@
 
 3.  **Launch with Docker Compose**:
     ```bash
+    ```bash
     docker-compose up -d --build
     ```
     *Note: The backend will automatically create the necessary database schema and an admin user on the first run.*
+
+---
+
+## 🔑 Environment Variables
+
+The platform uses a unified `.env` file at the root directory to manage its configuration. Before running the application, ensure you have set up the variables correctly.
+
+| Variable | Description | Default / Example |
+| :--- | :--- | :--- |
+| **`DATABASE_URL`** | Connection string for PostGIS | `postgresql://roy:123@host.docker.internal:5432/geospatial_db` |
+| **`JWT_SECRET`** | Secret key for JWT authentication | `supersecretgeoaikey2026` |
+| **`OLLAMA_HOST`** | URL of the Ollama server | `http://host.docker.internal:11434` |
+| **`VITE_API_URL`** | Backend API URL for the Frontend | `http://localhost:8000` |
+| **`VITE_MARTIN_URL`** | Martin Tileserver URL for the Frontend | `http://localhost:3333` |
+
+> [!TIP]
+> Use the provided `.env.example` as a template: `cp .env.example .env`.
 
 ---
 
@@ -73,7 +91,7 @@ Saat pertama kali dijalankan, sistem akan otomatis membuat satu akun admin defau
 
 | Service | Description | Access URL |
 | :--- | :--- | :--- |
-| **Geo-AI Dashboard** | Main UI (Login, Data Upload, Map Viewer) | [http://localhost:8080](http://localhost:8080) |
+| **Smart Geo Portal Dashboard** | Main UI (Login, Data Upload, Map Viewer) | [http://localhost:8080](http://localhost:8080) |
 | **FastAPI Backend** | API Documentation (Swagger UI) | [http://localhost:8000/docs](http://localhost:8000/docs) |
 | **Martin Tileserver** | High-performance Vector Tile Server | [http://localhost:3333](http://localhost:3333) |
 | **Maputnik Editor** | Visual Style Editor for MapLibre | [http://localhost:8888](http://localhost:8888) |

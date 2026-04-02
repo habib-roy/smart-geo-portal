@@ -1,4 +1,9 @@
 import os
+from dotenv import load_dotenv
+
+# Cari .env di root (satu tingkat di atas folder backend)
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 

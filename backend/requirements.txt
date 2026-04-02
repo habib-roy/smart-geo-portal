@@ -20,3 +20,4 @@ passlib[bcrypt]
 python-multipart
 docker
 watchdog
+python-dotenv

@@ -9,6 +9,11 @@ import models, database, auth
 from datetime import timedelta
 import tempfile
 import os
+from dotenv import load_dotenv
+
+# Cari .env di root
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+
 import re
 import docker
 import json
@@ -37,7 +42,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Geo-AI Platform API")
+app = FastAPI(title="Smart Geo Portal Platform API")
 
 # Add CORS middleware
 app.add_middleware(
@@ -105,7 +110,7 @@ async def startup_event():
 
 @app.get("/", tags=["General"])
 def read_root():
-    return {"status": "Geo-AI Backend Online", "version": "1.3.0"}
+    return {"status": "Smart Geo Portal Backend Online", "version": "1.3.0"}
 
 # --- BACKGROUND TASKS ---
 
@@ -168,7 +173,7 @@ async def generate_embeddings_task(data_id: int):
         # Try to restart Martin to discover the new table
         try:
             client = docker.from_env()
-            container = client.containers.get("martin_tileserver")
+            container = client.containers.get("smart_geo_martin")
             container.restart()
             print("Successfully restarted Martin Tile Server")
         except Exception as de:

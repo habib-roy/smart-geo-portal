@@ -9,11 +9,12 @@ export default function Register() {
   const [success, setSuccess] = useState(false);
   const [err, setErr] = useState('');
   const navigate = useNavigate();
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:8000/auth/register', {
+      await axios.post(`${API_URL}/auth/register`, {
         username: username,
         password: password
       });
@@ -31,7 +32,7 @@ export default function Register() {
           <div className="inline-flex items-center justify-center p-3 bg-indigo-500/10 rounded-xl mb-4">
             <UserPlus className="text-indigo-500 w-8 h-8" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Daftar Geo-AI</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Daftar Smart Geo Portal</h1>
           <p className="text-gray-400">Buat akun baru untuk mulai menjelajah</p>
         </div>
 

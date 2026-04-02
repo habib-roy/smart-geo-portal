@@ -1,4 +1,9 @@
 import os
+from dotenv import load_dotenv
+
+# Cari .env di root
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt

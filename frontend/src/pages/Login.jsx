@@ -27,7 +27,7 @@ export default function Login() {
           <div className="inline-flex items-center justify-center p-3 bg-blue-500/10 rounded-xl mb-4">
             <MapPin className="text-blue-500 w-8 h-8" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Masuk Geo-AI</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Masuk Smart Geo Portal</h1>
           <p className="text-gray-400">Silakan masuk dengan akun Anda</p>
         </div>
 

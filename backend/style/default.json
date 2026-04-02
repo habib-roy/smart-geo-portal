@@ -1,6 +1,6 @@
 {
   "version": 8,
-  "name": "Geo-AI Default Style",
+  "name": "Smart Geo Portal Default Style",
   "metadata": {
     "maputnik:renderer": "mlgljs"
   },
@@ -48,5 +48,5 @@
       }
     }
   ],
-  "id": "geo-ai-v1"
+  "id": "Smart Geo Portal-v1"
 }

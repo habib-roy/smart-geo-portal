@@ -2,16 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { 
-  LayoutDashboard, 
-  Upload, 
-  Map as MapIcon, 
-  Database, 
-  Users, 
-  LogOut, 
-  Plus, 
-  FileJson, 
-  Check, 
+import {
+  LayoutDashboard,
+  Upload,
+  Map as MapIcon,
+  Database,
+  Users,
+  LogOut,
+  Plus,
+  FileJson,
+  Check,
   X,
   Loader2,
   Trash2,
@@ -27,10 +27,11 @@ export default function Dashboard() {
   const [desc, setDesc] = useState('');
   const [showUpload, setShowUpload] = useState(false);
   const navigate = useNavigate();
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
   useEffect(() => {
     fetchData();
-    
+
     // Polling jika ada data yang sedang 'processing'
     const interval = setInterval(() => {
       setDataList(prev => {
@@ -47,7 +48,7 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     try {
-      const res = await axios.get('http://localhost:8000/data/list');
+      const res = await axios.get(`${API_URL}/data/list`);
       setDataList(res.data);
     } catch (err) {
       console.error(err);
@@ -64,8 +65,8 @@ export default function Dashboard() {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:8000/data/upload', formData, {
-        headers: { 
+      await axios.post(`${API_URL}/data/upload`, formData, {
+        headers: {
           'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${token}`
         }
@@ -83,10 +84,10 @@ export default function Dashboard() {
 
   const handleDelete = async (dataId, filename) => {
     if (!confirm(`Apakah Anda yakin ingin menghapus data "${filename}"? Tindakan ini permanen.`)) return;
-    
+
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:8000/data/delete/${dataId}`, {
+      await axios.delete(`${API_URL}/data/delete/${dataId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchData();
@@ -103,14 +104,14 @@ export default function Dashboard() {
           <div className="bg-blue-600 p-2 rounded-lg">
             <LayoutDashboard size={24} className="text-white" />
           </div>
-          <span className="font-bold text-xl tracking-tight">Geo-AI</span>
+          <span className="font-bold text-xl tracking-tight">Smart Geo Portal</span>
         </div>
 
         <nav className="flex-1 px-4 py-4 space-y-2">
           <button className="w-full flex items-center gap-3 px-4 py-3 bg-gray-800 text-white rounded-xl font-medium transition-all">
             <Database size={20} /> Data Management
           </button>
-          <button 
+          <button
             onClick={() => navigate('/map')}
             className="w-full flex items-center gap-3 px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-white rounded-xl transition-all"
           >
@@ -131,7 +132,7 @@ export default function Dashboard() {
               <p className="text-xs text-gray-500 capitalize">{user?.role || 'user'}</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={logout}
             className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 rounded-xl transition-all text-sm font-medium"
           >
@@ -147,12 +148,12 @@ export default function Dashboard() {
             <h1 className="text-2xl font-bold text-white">Data Management</h1>
             <p className="text-gray-500 text-sm">Kelola GeoJSON dan Shapefile Anda</p>
           </div>
-            <button 
-              onClick={() => setShowUpload(true)}
-              className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-medium transition-all shadow-lg shadow-blue-600/20"
-            >
-              <Plus size={20} /> Upload Baru
-            </button>
+          <button
+            onClick={() => setShowUpload(true)}
+            className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-medium transition-all shadow-lg shadow-blue-600/20"
+          >
+            <Plus size={20} /> Upload Baru
+          </button>
         </header>
 
         <div className="px-8 pb-12">
@@ -204,8 +205,8 @@ export default function Dashboard() {
                             <span className="font-medium text-gray-200 block">{item.filename}</span>
                             {item.status === 'processing' && (
                               <div className="w-32 h-1 bg-gray-800 rounded-full mt-2 overflow-hidden">
-                                <div 
-                                  className="h-full bg-blue-500 transition-all duration-500" 
+                                <div
+                                  className="h-full bg-blue-500 transition-all duration-500"
                                   style={{ width: `${item.progress}%` }}
                                 />
                               </div>
@@ -214,12 +215,11 @@ export default function Dashboard() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm">
-                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                          item.status === 'completed' ? 'bg-green-500/10 text-green-500' :
-                          item.status === 'processing' ? 'bg-blue-500/10 text-blue-500 animate-pulse' :
-                          item.status === 'failed' ? 'bg-red-500/10 text-red-500' :
-                          'bg-gray-700/50 text-gray-400'
-                        }`}>
+                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${item.status === 'completed' ? 'bg-green-500/10 text-green-500' :
+                            item.status === 'processing' ? 'bg-blue-500/10 text-blue-500 animate-pulse' :
+                              item.status === 'failed' ? 'bg-red-500/10 text-red-500' :
+                                'bg-gray-700/50 text-gray-400'
+                          }`}>
                           {item.status} {item.status === 'processing' ? `(${item.progress}%)` : ''}
                         </span>
                       </td>
@@ -228,14 +228,14 @@ export default function Dashboard() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <button 
+                          <button
                             onClick={() => navigate('/map')}
                             className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-all"
                             title="Lihat di Peta"
                           >
                             <ExternalLink size={18} />
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleDelete(item.id, item.filename)}
                             className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
                             title="Hapus Data"
@@ -259,7 +259,7 @@ export default function Dashboard() {
           <div className="bg-gray-900 border border-gray-800 w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl">
             <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
               <h3 className="font-bold text-white text-lg">Upload Dataset Geospatial</h3>
-              <button 
+              <button
                 onClick={() => !uploading && setShowUpload(false)}
                 className="text-gray-500 hover:text-white p-1 rounded-lg hover:bg-gray-800 transition-all"
               >
@@ -269,10 +269,9 @@ export default function Dashboard() {
             <form onSubmit={handleUpload} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Pilih File (GeoJSON / .zip Shapefile)</label>
-                <div 
-                  className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center gap-3 cursor-pointer transition-all ${
-                    file ? 'border-blue-500 bg-blue-500/5' : 'border-gray-700 hover:border-gray-600 hover:bg-gray-800'
-                  }`}
+                <div
+                  className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center gap-3 cursor-pointer transition-all ${file ? 'border-blue-500 bg-blue-500/5' : 'border-gray-700 hover:border-gray-600 hover:bg-gray-800'
+                    }`}
                   onClick={() => document.getElementById('file-input').click()}
                 >
                   {file ? (
@@ -286,10 +285,10 @@ export default function Dashboard() {
                       <p className="text-gray-400 text-sm">Klik atau tarik file ke sini</p>
                     </>
                   )}
-                  <input 
+                  <input
                     id="file-input"
-                    type="file" 
-                    className="hidden" 
+                    type="file"
+                    className="hidden"
                     onChange={(e) => setFile(e.target.files[0])}
                     accept=".json,.geojson,.zip"
                   />
@@ -297,14 +296,14 @@ export default function Dashboard() {
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Deskripsi (Opsional)</label>
-                <textarea 
+                <textarea
                   className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
                   placeholder="Dataset area..."
                   value={desc}
                   onChange={(e) => setDesc(e.target.value)}
                 />
               </div>
-              <button 
+              <button
                 disabled={uploading || !file}
                 className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-600 text-white font-bold rounded-xl flex items-center justify-center gap-3 transition-all"
               >

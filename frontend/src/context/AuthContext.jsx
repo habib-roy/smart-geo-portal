@@ -16,9 +16,11 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
   const fetchUser = async (token) => {
     try {
-      const res = await axios.get('http://localhost:8000/users/me', {
+      const res = await axios.get(`${API_URL}/users/me`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUser(res.data);
@@ -35,7 +37,7 @@ export const AuthProvider = ({ children }) => {
     formData.append('username', username);
     formData.append('password', password);
     
-    const res = await axios.post('http://localhost:8000/auth/login', formData);
+    const res = await axios.post(`${API_URL}/auth/login`, formData);
     localStorage.setItem('token', res.data.access_token);
     await fetchUser(res.data.access_token);
   };
